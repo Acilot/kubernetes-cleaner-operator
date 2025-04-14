@@ -49,5 +49,5 @@ spec:
       serviceAccountName: clean-operator-sa
       containers:
       - name: clean-operator
-        image: ""
+        image: acilot/k8s-cleaner-operator:latest
         imagePullPolicy: Always

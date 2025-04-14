@@ -5,6 +5,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY operator.py .
+COPY /app/custom_operator.py .
 
-CMD ["python", "operator.py"]
+CMD ["python", "custom_operator.py"]

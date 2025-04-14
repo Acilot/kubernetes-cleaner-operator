@@ -1,2 +1,3 @@
 kopf
 kubernetes
+pyyaml>=5.4.1
