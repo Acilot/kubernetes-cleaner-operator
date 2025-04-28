@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-cleanup-operator
+  namespace: operators
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pod-cleanup-operator
+  template:
+    metadata:
+      labels:
+        app: pod-cleanup-operator
+    spec:
+      serviceAccountName: pod-cleanup-operator
+      containers:
+      - name: operator
+        image: <your-docker-repo>/pod-cleanup-operator:latest
+        env:
+        - name: NAMESPACE_PATTERN
+          value: ".*std-.*"

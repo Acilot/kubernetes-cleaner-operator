@@ -1,10 +1,5 @@
-FROM python:3.9-slim
-
+FROM python:3.11-slim
+RUN pip install kopf kubernetes
+COPY main.py /app/main.py
 WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY /app/custom_operator.py .
-
-CMD ["python", "custom_operator.py"]
+ENTRYPOINT ["kopf", "run", "--standalone", "main.py"]
