@@ -11,6 +11,7 @@ NAMESPACE_LIST = [ns.strip() for ns in os.environ.get("NAMESPACE_LIST", "").spli
 EXCLUDED_NAMESPACES = {"kube-system", "kube-public", "kube-node-lease"}
 
 def namespace_matches(name: str) -> bool:
+    return name.startswith("ns") and name not in EXCLUDED_NAMESPACES
     if name in EXCLUDED_NAMESPACES:
         return False
     if name in NAMESPACE_LIST:
