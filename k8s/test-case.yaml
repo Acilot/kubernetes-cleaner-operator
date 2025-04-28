@@ -1,16 +1,8 @@
+---
 apiVersion: v1
-kind: Pod
+kind: Namespace
 metadata:
-  name: failed-pod
-  namespace: std-test
-  labels:
-    app: test-app
-spec:
-  containers:
-  - name: fail
-    image: busybox
-    command: ["sh", "-c", "exit 1"]
-restartPolicy: Never
+  name: std-test
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -33,23 +25,24 @@ spec:
         command: ["sh", "-c", "sleep 3600"]
 ---
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: std-test
----
-apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: std-test-2
+  namespace: std-test
   labels:
-    app: test-2-app
+    app: test-app
 spec:
+  restartPolicy: Never
   containers:
-  - name: fail
-    image: busybox
-    command: ["sh", "-c", "exit 1"]
-restartPolicy: Never
+    - name: fail
+      image: busybox
+      command: ["sh", "-c", "exit 1"]
+---
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: std-test-2
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -72,23 +65,24 @@ spec:
         command: ["sh", "-c", "sleep 3600"]
 ---
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: std-test-2
----
-apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: std-test-3
+  namespace: std-test-2
   labels:
-    app: test-3-app
+    app: test-2-app
 spec:
+  restartPolicy: Never
   containers:
-  - name: fail
-    image: busybox
-    command: ["sh", "-c", "exit 1"]
-restartPolicy: Never
+    - name: fail
+      image: busybox
+      command: ["sh", "-c", "exit 1"]
+---
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: std-test-3
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -111,6 +105,15 @@ spec:
         command: ["sh", "-c", "sleep 3600"]
 ---
 apiVersion: v1
-kind: Namespace
+kind: Pod
 metadata:
-  name: std-test-3
+  name: failed-pod
+  namespace: std-test-3
+  labels:
+    app: test-3-app
+spec:
+  restartPolicy: Never
+  containers:
+    - name: fail
+      image: busybox
+      command: ["sh", "-c", "exit 1"]
