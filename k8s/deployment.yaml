@@ -18,5 +18,7 @@ spec:
       - name: operator
         image: <your-docker-repo>/pod-cleanup-operator:latest
         env:
-        - name: NAMESPACE_PATTERN
-          value: ".*std-.*"
+        - name: NAMESPACE_PATTERNS
+          value: ".*std-.*,.*stud-.*"
+        - name: NAMESPACE_LIST
+          value: "ns,monitoring"
