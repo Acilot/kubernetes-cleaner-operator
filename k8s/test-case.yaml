@@ -2,13 +2,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mbd-test
+  name: std-111-test
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-deployment
-  namespace: mbd-test
+  namespace: std-111-test
 spec:
   replicas: 3
   selector:
@@ -28,7 +28,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: mbd-test
+  namespace: std-111-test
   labels:
     app: test-app
 spec:
@@ -42,13 +42,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mbd-test-2
+  name: std-111-test-2
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-2-deployment
-  namespace: mbd-test-2
+  namespace: std-111-test-2
 spec:
   replicas: 3
   selector:
@@ -68,7 +68,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: mbd-test-2
+  namespace: std-111-test-2
   labels:
     app: test-2-app
 spec:
@@ -81,13 +81,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: mbd-test-3
+  name: std-111-test-3
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-3-deployment
-  namespace: mbd-test-3
+  namespace: std-111-test-3
 spec:
   replicas: 3
   selector:
@@ -107,7 +107,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: mbd-test-3
+  namespace: std-111-test-3
   labels:
     app: test-3-app
 spec:
