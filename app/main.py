@@ -20,7 +20,7 @@ def namespace_matches(name: str) -> bool:
             return True
     return False
 
-def pod_not_running_long_enough(pod, threshold_hours=2):
+def pod_not_running_long_enough(pod, threshold_hours=1):
     phase = pod.status.phase
     if phase == "Running":
         return False

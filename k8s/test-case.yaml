@@ -2,13 +2,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: std-test
+  name: mbd-test
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-deployment
-  namespace: std-test
+  namespace: mbd-test
 spec:
   replicas: 3
   selector:
@@ -28,7 +28,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: std-test
+  namespace: mbd-test
   labels:
     app: test-app
 spec:
@@ -42,13 +42,13 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: std-test-2
+  name: mbd-test-2
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-2-deployment
-  namespace: std-test-2
+  namespace: mbd-test-2
 spec:
   replicas: 3
   selector:
@@ -68,7 +68,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: std-test-2
+  namespace: mbd-test-2
   labels:
     app: test-2-app
 spec:
@@ -78,17 +78,16 @@ spec:
       image: busybox
       command: ["sh", "-c", "exit 1"]
 ---
----
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: std-test-3
+  name: mbd-test-3
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test-3-deployment
-  namespace: std-test-3
+  namespace: mbd-test-3
 spec:
   replicas: 3
   selector:
@@ -108,7 +107,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: failed-pod
-  namespace: std-test-3
+  namespace: mbd-test-3
   labels:
     app: test-3-app
 spec:
