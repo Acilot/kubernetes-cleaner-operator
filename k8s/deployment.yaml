@@ -21,4 +21,4 @@ spec:
         - name: NAMESPACE_PATTERNS
           value: ".*std-.*,.*stud-.*"
         - name: NAMESPACE_LIST
-          value: "runner"
+          value: "monitoring-new"

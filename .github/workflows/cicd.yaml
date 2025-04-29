@@ -54,8 +54,8 @@ jobs:
         run: |
           curl https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash -s -- -i /opt/yandex-cloud -n
           /opt/yandex-cloud/bin/yc config set token $YC_TOKEN
-          /opt/yandex-cloud/bin/yc config set folder-id b1g5jeeu8ne6ia128abh
-          /opt/yandex-cloud/bin/yc managed-kubernetes cluster get-credentials --id cattml5uo4bo6nbd9fbd --external
+          /opt/yandex-cloud/bin/yc config set folder-id b1g26hqnugteh52j2dfr
+          /opt/yandex-cloud/bin/yc managed-kubernetes cluster get-credentials --id catkvctgrte4hunhvs8f --external
 
       - name: Set image in manifests
         run: |
@@ -65,4 +65,3 @@ jobs:
         run: |
           kubectl apply -f k8s/rbac.yaml
           kubectl apply -f k8s/deployment.yaml
-          kubectl apply -f k8s/test-case.yaml
