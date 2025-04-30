@@ -16,6 +16,12 @@ kind: ClusterRole
 metadata:
   name: pod-cleanup-operator
 rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "list", "watch", "patch"]
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: [""]
   resources: ["pods"]
   verbs: ["get", "list", "watch", "delete"]
@@ -26,14 +32,8 @@ rules:
   resources: ["namespaces"]
   verbs: ["get", "list", "watch", "delete", "patch"]
 - apiGroups: ["apps"]
-  resources: ["deployments"]
-  verbs: ["get", "list", "watch", "patch"]
-- apiGroups: ["apps"]
   resources: ["deployments/scale"]
   verbs: ["get", "patch"]
-- apiGroups: ["apiextensions.k8s.io"]
-  resources: ["customresourcedefinitions"]
-  verbs: ["get", "list", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
