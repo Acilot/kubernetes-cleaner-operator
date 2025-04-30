@@ -14,11 +14,20 @@ spec:
         app: pod-cleanup-operator
     spec:
       serviceAccountName: pod-cleanup-operator
+      automountServiceAccountToken: true
       containers:
-      - name: operator
-        image: <your-docker-repo>/pod-cleanup-operator:latest
-        env:
-        - name: NAMESPACE_PATTERNS
-          value: ".*std-.*,.*stud-.*"
-        - name: NAMESPACE_LIST
-          value: "monitoring-new"
+        - name: operator
+          image: your-docker-repo/pod-cleanup-operator:latest
+          imagePullPolicy: Always
+          env:
+            - name: NAMESPACE_PATTERNS
+              value: "std-.*"
+            - name: NAMESPACE_LIST
+              value: ""
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -6,6 +6,14 @@ metadata:
     name: operators
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: pod-cleanup-operator-token
+  annotations:
+    kubernetes.io/service-account.name: pod-cleanup-operator
+type: kubernetes.io/service-account-token
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: pod-cleanup-operator
@@ -41,3 +49,4 @@ subjects:
 - kind: ServiceAccount
   name: pod-cleanup-operator
   namespace: operators
+
