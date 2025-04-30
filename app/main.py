@@ -4,11 +4,9 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# Маски и списки неймспейсов из переменных окружения
-NAMESPACE_PATTERNS = [pattern.strip() for pattern in os.environ.get("NAMESPACE_PATTERNS", ".*std-.*").split(",")]
+NAMESPACE_PATTERNS = [pattern.strip() for pattern in os.environ.get("NAMESPACE_PATTERNS", "std-.*").split(",")]
 NAMESPACE_LIST = [ns.strip() for ns in os.environ.get("NAMESPACE_LIST", "").split(",") if ns.strip()]
-EXCLUDED_NAMESPACES = {"kube-system", "kube-public", "kube-node-lease", "ingress-nginx", "argocd"}
-
+EXCLUDED_NAMESPACES = {"kube-system", "kube-public", "kube-node-lease", "default"}
 
 def namespace_matches(name: str) -> bool:
     if name in EXCLUDED_NAMESPACES:
@@ -20,6 +18,12 @@ def namespace_matches(name: str) -> bool:
             return True
     return False
 
+def namespace_older_than(ns, days=210):
+    creation_time = ns.metadata.creation_timestamp
+    if not creation_time:
+        return False
+    age = datetime.now(timezone.utc) - creation_time
+    return age > timedelta(days=days)
 
 def pod_not_running_long_enough(pod, threshold_hours=24):
     phase = pod.status.phase
@@ -30,17 +34,48 @@ def pod_not_running_long_enough(pod, threshold_hours=24):
     age = datetime.now(timezone.utc) - pod.status.start_time
     return age > timedelta(hours=threshold_hours)
 
-
 def pod_pending_too_long(pod, threshold_hours=1):
     if pod.status.phase != "Pending":
         return False
-    # start_time может быть None для Pending, используем creation_timestamp
     start_time = pod.status.start_time or pod.metadata.creation_timestamp
     if not start_time:
         return False
     age = datetime.now(timezone.utc) - start_time
     return age > timedelta(hours=threshold_hours)
 
+def remove_finalizers_from_namespace(v1, ns, logger):
+    ns_name = ns.metadata.name
+    finalizers = getattr(ns.spec, 'finalizers', []) or []
+    if finalizers:
+        logger.warning(f"Namespace '{ns_name}' застрял в Terminating из-за финализаторов: {finalizers}. Удаляю финализаторы.")
+        body = {"spec": {"finalizers": []}}
+        try:
+            v1.patch_namespace(ns_name, body)
+            logger.info(f"Финализаторы удалены из namespace '{ns_name}'.")
+        except Exception as e:
+            logger.error(f"Ошибка при удалении финализаторов из namespace '{ns_name}': {e}")
+
+@kopf.timer('namespaces', interval=86400)  # раз в сутки
+def cleanup_namespaces(logger, **kwargs):
+    kubernetes.config.load_incluster_config()
+    v1 = kubernetes.client.CoreV1Api()
+    all_namespaces = v1.list_namespace().items
+
+    for ns in all_namespaces:
+        ns_name = ns.metadata.name
+        if namespace_matches(ns_name) and namespace_older_than(ns, days=200):
+            # Если namespace уже в процессе удаления (Terminating)
+            if ns.metadata.deletion_timestamp:
+                remove_finalizers_from_namespace(v1, ns, logger)
+            else:
+                logger.info(f"Удаляю namespace '{ns_name}' (возраст: {ns.metadata.creation_timestamp})")
+                try:
+                    v1.delete_namespace(ns_name)
+                    logger.info(f"Namespace '{ns_name}' успешно удалён.")
+                except Exception as e:
+                    logger.error(f"Ошибка при удалении namespace '{ns_name}': {e}")
+        else:
+            logger.debug(f"Namespace '{ns_name}' не подходит под условия удаления.")
 
 @kopf.timer('apps', 'v1', 'deployments', interval=3600)
 def cleanup_pods(spec, namespace, name, logger, **kwargs):
@@ -48,7 +83,6 @@ def cleanup_pods(spec, namespace, name, logger, **kwargs):
     v1 = kubernetes.client.CoreV1Api()
     apps_v1 = kubernetes.client.AppsV1Api()
 
-    # Получаем все неймспейсы
     all_namespaces = v1.list_namespace().items
     namespaces_to_check = [ns.metadata.name for ns in all_namespaces if namespace_matches(ns.metadata.name)]
     logger.info(f"Неймспейсы для проверки: {namespaces_to_check}")
@@ -83,7 +117,7 @@ def cleanup_pods(spec, namespace, name, logger, **kwargs):
                         logger.info(f"Deployment '{dep_name}' в неймспейсе '{ns}' успешно скейлен в 0.")
                     except Exception as e:
                         logger.error(f"Ошибка при скейлинге deployment '{dep_name}' в неймспейсе '{ns}': {e}")
-                    break
+                    break  # Достаточно одного такого пода
 
             # Удаляем поды не в Running более 24 часов
             for pod in pods:
