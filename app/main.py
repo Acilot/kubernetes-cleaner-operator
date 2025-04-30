@@ -9,6 +9,7 @@ NAMESPACE_PATTERNS = [pattern.strip() for pattern in os.environ.get("NAMESPACE_P
 NAMESPACE_LIST = [ns.strip() for ns in os.environ.get("NAMESPACE_LIST", "").split(",") if ns.strip()]
 EXCLUDED_NAMESPACES = {"kube-system", "kube-public", "kube-node-lease", "ingress-nginx", "argocd"}
 
+
 def namespace_matches(name: str) -> bool:
     if name in EXCLUDED_NAMESPACES:
         return False
@@ -19,6 +20,7 @@ def namespace_matches(name: str) -> bool:
             return True
     return False
 
+
 def pod_not_running_long_enough(pod, threshold_hours=24):
     phase = pod.status.phase
     if phase == "Running":
@@ -27,6 +29,7 @@ def pod_not_running_long_enough(pod, threshold_hours=24):
         return False
     age = datetime.now(timezone.utc) - pod.status.start_time
     return age > timedelta(hours=threshold_hours)
+
 
 def pod_pending_too_long(pod, threshold_hours=1):
     if pod.status.phase != "Pending":
@@ -37,6 +40,7 @@ def pod_pending_too_long(pod, threshold_hours=1):
         return False
     age = datetime.now(timezone.utc) - start_time
     return age > timedelta(hours=threshold_hours)
+
 
 @kopf.timer('apps', 'v1', 'deployments', interval=3600)
 def cleanup_pods(spec, namespace, name, logger, **kwargs):
