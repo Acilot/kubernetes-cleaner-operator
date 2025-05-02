@@ -24,10 +24,3 @@ spec:
               value: "std-.*"
             - name: NAMESPACE_LIST
               value: ""
-          resources:
-            requests:
-              cpu: 100m
-              memory: 512mi
-            limits:
-              cpu: 2
-              memory: 2Gi
