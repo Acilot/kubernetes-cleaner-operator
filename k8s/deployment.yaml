@@ -25,7 +25,6 @@ spec:
         - name: NAMESPACE_LIST
           value: ""
         args:
-        - kopf
         - run
         - --standalone
         - --all-namespaces
