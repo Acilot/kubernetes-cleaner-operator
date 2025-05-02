@@ -4,11 +4,14 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
+# Настройки из переменных окружения
 NAMESPACE_PATTERNS = [pattern.strip() for pattern in os.environ.get("NAMESPACE_PATTERNS", "std-.*").split(",")]
 NAMESPACE_LIST = [ns.strip() for ns in os.environ.get("NAMESPACE_LIST", "").split(",") if ns.strip()]
 EXCLUDED_NAMESPACES = {"kube-system", "kube-public", "kube-node-lease", "default"}
+KOPF_FINALIZER = "kopf.zalando.org/KopfFinalizerMarker"
 
 def namespace_matches(name: str) -> bool:
+    """Проверяет, подходит ли namespace под маску или список"""
     if name in EXCLUDED_NAMESPACES:
         return False
     if name in NAMESPACE_LIST:
@@ -18,7 +21,8 @@ def namespace_matches(name: str) -> bool:
             return True
     return False
 
-def namespace_older_than(ns, days=210):
+def namespace_older_than(ns, days=250):
+    """Проверяет, старше ли namespace указанного количества дней"""
     creation_time = ns.metadata.creation_timestamp
     if not creation_time:
         return False
@@ -26,6 +30,7 @@ def namespace_older_than(ns, days=210):
     return age > timedelta(days=days)
 
 def pod_not_running_long_enough(pod, threshold_hours=24):
+    """Проверяет, находится ли под не в Running статусе дольше указанного времени"""
     phase = pod.status.phase
     if phase == "Running":
         return False
@@ -35,6 +40,7 @@ def pod_not_running_long_enough(pod, threshold_hours=24):
     return age > timedelta(hours=threshold_hours)
 
 def pod_pending_too_long(pod, threshold_hours=1):
+    """Проверяет, находится ли под в Pending статусе дольше указанного времени"""
     if pod.status.phase != "Pending":
         return False
     start_time = pod.status.start_time or pod.metadata.creation_timestamp
@@ -44,6 +50,7 @@ def pod_pending_too_long(pod, threshold_hours=1):
     return age > timedelta(hours=threshold_hours)
 
 def remove_finalizers_from_namespace(v1, ns, logger):
+    """Удаляет финализаторы из namespace"""
     ns_name = ns.metadata.name
     finalizers = getattr(ns.spec, 'finalizers', []) or []
     if finalizers:
@@ -55,15 +62,72 @@ def remove_finalizers_from_namespace(v1, ns, logger):
         except Exception as e:
             logger.error(f"Ошибка при удалении финализаторов из namespace '{ns_name}': {e}")
 
-@kopf.timer('namespaces', interval=86400)  # раз в сутки
-def cleanup_namespaces(logger, **kwargs):
+def remove_finalizers_from_resources(namespace, logger):
+    """Удаляет финализаторы Kopf со всех ресурсов в namespace"""
+    try:
+        kubernetes.config.load_incluster_config()
+        v1 = kubernetes.client.CoreV1Api()
+        apps_v1 = kubernetes.client.AppsV1Api()
+        
+        # Удаляем финализаторы с Pod
+        try:
+            pods = v1.list_namespaced_pod(namespace).items
+            for pod in pods:
+                finalizers = pod.metadata.finalizers or []
+                if KOPF_FINALIZER in finalizers:
+                    logger.warning(f"Удаляю финализатор с Pod {pod.metadata.name} в ns {namespace}")
+                    body = {"metadata": {"finalizers": [f for f in finalizers if f != KOPF_FINALIZER]}}
+                    v1.patch_namespaced_pod(pod.metadata.name, namespace, body)
+        except Exception as e:
+            logger.error(f"Ошибка при снятии финализаторов с Pod в {namespace}: {e}")
+            
+        # Удаляем финализаторы с Deployment
+        try:
+            deployments = apps_v1.list_namespaced_deployment(namespace).items
+            for dep in deployments:
+                finalizers = dep.metadata.finalizers or []
+                if KOPF_FINALIZER in finalizers:
+                    logger.warning(f"Удаляю финализатор с Deployment {dep.metadata.name} в ns {namespace}")
+                    body = {"metadata": {"finalizers": [f for f in finalizers if f != KOPF_FINALIZER]}}
+                    apps_v1.patch_namespaced_deployment(dep.metadata.name, namespace, body)
+        except Exception as e:
+            logger.error(f"Ошибка при снятии финализаторов с Deployment в {namespace}: {e}")
+            
+        # Другие типы ресурсов можно добавить по аналогии
+    except Exception as e:
+        logger.error(f"Ошибка при снятии финализаторов с ресурсов в {namespace}: {e}")
+
+@kopf.timer('namespaces', interval=600)  # Каждые 10 минут
+def finalize_stuck_namespaces(logger, **kwargs):
+    """Обработка зависших namespace в состоянии Terminating"""
     kubernetes.config.load_incluster_config()
     v1 = kubernetes.client.CoreV1Api()
     all_namespaces = v1.list_namespace().items
 
     for ns in all_namespaces:
         ns_name = ns.metadata.name
-        if namespace_matches(ns_name) and namespace_older_than(ns, days=250):
+        if namespace_matches(ns_name) and ns.status.phase == "Terminating":
+            logger.warning(f"Namespace {ns_name} завис в Terminating. Снимаю финализаторы.")
+            # Сначала снимаем финализаторы с ресурсов
+            remove_finalizers_from_resources(ns_name, logger)
+            # Затем снимаем финализаторы с самого namespace, если он все еще в Terminating
+            try:
+                ns_updated = v1.read_namespace(ns_name)
+                if ns_updated.status.phase == "Terminating":
+                    remove_finalizers_from_namespace(v1, ns_updated, logger)
+            except Exception as e:
+                logger.error(f"Ошибка при обновлении namespace {ns_name}: {e}")
+
+@kopf.timer('namespaces', interval=86400)  # Раз в сутки
+def cleanup_namespaces(logger, **kwargs):
+    """Удаление старых namespace по маске и возрасту"""
+    kubernetes.config.load_incluster_config()
+    v1 = kubernetes.client.CoreV1Api()
+    all_namespaces = v1.list_namespace().items
+
+    for ns in all_namespaces:
+        ns_name = ns.metadata.name
+        if namespace_matches(ns_name) and namespace_older_than(ns, days=200):
             # Если namespace уже в процессе удаления (Terminating)
             if ns.metadata.deletion_timestamp:
                 remove_finalizers_from_namespace(v1, ns, logger)
@@ -79,6 +143,7 @@ def cleanup_namespaces(logger, **kwargs):
 
 @kopf.timer('apps', 'v1', 'deployments', interval=3600)
 def cleanup_pods(spec, namespace, name, logger, **kwargs):
+    """Очистка подов и скейлинг деплойментов"""
     kubernetes.config.load_incluster_config()
     v1 = kubernetes.client.CoreV1Api()
     apps_v1 = kubernetes.client.AppsV1Api()
