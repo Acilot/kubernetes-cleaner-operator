@@ -63,7 +63,7 @@ def cleanup_namespaces(logger, **kwargs):
 
     for ns in all_namespaces:
         ns_name = ns.metadata.name
-        if namespace_matches(ns_name) and namespace_older_than(ns, days=200):
+        if namespace_matches(ns_name) and namespace_older_than(ns, days=250):
             # Если namespace уже в процессе удаления (Terminating)
             if ns.metadata.deletion_timestamp:
                 remove_finalizers_from_namespace(v1, ns, logger)
