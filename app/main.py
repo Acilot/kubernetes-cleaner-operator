@@ -97,7 +97,7 @@ def remove_finalizers_from_resources(namespace, logger):
     except Exception as e:
         logger.error(f"Ошибка при снятии финализаторов с ресурсов в {namespace}: {e}")
 
-@kopf.timer('namespaces', interval=600)  # Каждые 10 минут
+@kopf.timer('namespaces', interval=1200)  # Каждые 20 минут
 def finalize_stuck_namespaces(logger, **kwargs):
     """Обработка зависших namespace в состоянии Terminating"""
     kubernetes.config.load_incluster_config()
